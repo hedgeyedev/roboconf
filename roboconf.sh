@@ -187,6 +187,11 @@ function update_git_branch {
   git pull origin $current_git_branch_name
 }
 
+function echo_cmd {
+  echo "\$ $*"
+  $*
+}
+
 # Retrieves the latest submodule SHAs from git.  If you only want to
 # checkout the parent project's current SHAs, use function 'check_out_master_project_shas'
 function update_git_submodules {
