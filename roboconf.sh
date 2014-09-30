@@ -1,3 +1,5 @@
+#!/bin/sh
+
 echo "Begin loading roboconf functions..."
 
 function roboconf-check {
@@ -13,7 +15,7 @@ function roboconf-check {
 # this function only checks out what the current parent project "thinks" are the
 # current submodule SHAs.  To retrieve the latest SHAs (from the submodule
 # point of view), use function 'update_git_submodules'.
-function check_out_master_project_shas {
+function check_out_current_project_shas {
   roboconf-check git
   git submodule init
   git submodule sync
@@ -174,10 +176,10 @@ function heroku_addon {
   fi  
 }
 
-function checkout_git_master_branch {
-  echo "Checking out Git master branch"
-  git checkout master
-  current_git_branch_name=master
+function checkout_git_branch {
+  set_current_git_branch_name
+  echo "Checking out Git $current_git_branch_name branch"
+  git checkout $current_git_branch_name
 }
 
 function update_git_branch {
@@ -186,7 +188,7 @@ function update_git_branch {
 }
 
 # Retrieves the latest submodule SHAs from git.  If you only want to
-# checkout the parent project's current SHAs, use function 'check_out_master_project_shas'
+# checkout the parent project's current SHAs, use function 'check_out_current_branch_project_shas'
 function update_git_submodules {
   echo "***************************************************************"
   echo "   Auto-updating submodules"
@@ -246,17 +248,17 @@ function commit_and_push_submodule_sha_updates {
   fi  
 }
 
-function checkout_git_master_if_detached_head {
+function checkout_git_current_branch_if_detached_head {
   set_current_git_branch_name
   if [[ "$current_git_branch_name" = "HEAD" ]]; then
     echo "Git currently has detached HEAD"
-    checkout_git_master_branch
+    checkout_git_branch
   fi
 }
 
 function update_submodules {
   set_current_git_branch_name
-  checkout_git_master_if_detached_head
+  checkout_git_current_branch_if_detached_head
   update_git_branch
   update_git_submodules
 }
