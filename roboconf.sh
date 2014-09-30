@@ -193,7 +193,7 @@ function update_git_submodules {
   echo "***************************************************************"
   echo "   Auto-updating submodules"
   echo "***************************************************************"
-  echo_cmd git submodule update --remote --merge
+  echo_cmd git submodule update --remote --merge --force
 }
 
 function get_current_git_branch_name {
