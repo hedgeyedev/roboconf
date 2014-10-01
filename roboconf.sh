@@ -191,7 +191,7 @@ function update_git_branch {
 # checkout the parent project's current SHAs, use function 'check_out_current_branch_project_shas'
 function update_git_submodules {
   echo "***************************************************************"
-  echo "   Auto-updating submodules"
+  echo "   Auto-updating submodules for branch '$current_git_branch_name'"
   echo "***************************************************************"
   echo_cmd git submodule update --remote --merge --force
 }
