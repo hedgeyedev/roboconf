@@ -19,7 +19,7 @@ function check_out_current_project_shas {
   roboconf-check git
   git submodule init
   git submodule sync
-  git submodule update --remote
+  git submodule update
 }
 
 function roboconf-bundler {
