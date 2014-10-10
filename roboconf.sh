@@ -1,3 +1,5 @@
+#!/bin/sh
+
 echo "Begin loading roboconf functions..."
 
 function roboconf-check {
@@ -13,7 +15,7 @@ function roboconf-check {
 # this function only checks out what the current parent project "thinks" are the
 # current submodule SHAs.  To retrieve the latest SHAs (from the submodule
 # point of view), use function 'update_git_submodules'.
-function check_out_master_project_shas {
+function check_out_current_project_shas {
   roboconf-check git
   git submodule init
   git submodule sync
@@ -100,7 +102,7 @@ function detect_heroku_vars_changed {
     new_value="$( cut -d '=' -f 2- <<< $line )"
     new_value=`sed -E -e "s/(^'|'$)//g" <<< $new_value` # strip leading/trailing 's
     new_value=`sed -E -e "s/(^\"|\"$)//g" <<< $new_value` # strip leading/trailing "s
-    if [[ $new_key =~ 'HEROKU_CONFIG_ADD_CONSTANTS' # ignore this script-only variable; it's not a Heroku config setting
+    if [[ $new_key =~ 'HEROKU_CONFIG_ADD_CONSTANTS' # ignore this script-only variable; it is not a Heroku config setting
         || $new_key == \#* # ignore lines that start with '#' (comments)
         || $new_key == '' # ignore blank lines
         ]]; then
@@ -174,24 +176,47 @@ function heroku_addon {
   fi  
 }
 
-function checkout_git_master_branch {
-  echo "Checking out Git master branch"
-  git checkout master
-  current_git_branch_name=master
+# Since database migration is performed in CMS, the db/schema.rb file
+# for non-CMS applications can get out of sync.  The ./configure file
+# in such projects should invoke this method to make sure that the
+# db/schema.rb file is updated periodically.
+#
+# The 'cruise' check is to allow Jenkins to not do this, since
+# non-CMS applications _do_ have their own databases and therefore
+# handle db/schema.rb differently.
+function dump_schema {
+    if ! [[ "$TEST_ENVIRONMENT" == 'cruise' ]]; then
+      bundle exec rake db:schema:dump
+    fi
 }
 
-function update_git_branch {
-  echo "Pulling latest changes from origin $current_git_branch_name"
-  git pull origin $current_git_branch_name
+# ***********************************************************
+# ****** BEGIN CODE TO SUPPORT AUTO SUBMODULE UPDATING ******
+# ***********************************************************
+
+function checkout_git_branch {
+  set_current_git_branch_name
+  echo "Checking out Git $current_git_branch_name branch"
+  git checkout $current_git_branch_name
 }
 
 # Retrieves the latest submodule SHAs from git.  If you only want to
-# checkout the parent project's current SHAs, use function 'check_out_master_project_shas'
-function update_git_submodules {
-  echo "***************************************************************"
-  echo "   Auto-updating submodules"
-  echo "***************************************************************"
-  echo_cmd git submodule update --remote --merge
+# checkout the parent project's current SHAs, use function 'check_out_current_branch_project_shas'
+#
+# NOTE: this is only intended for Jenkins use; it presumes the 'git remote' to retrieve
+# from to be 'origin'.  Whether it runs or not depends upon the setting of the Jenkins
+# environment variable $AUTO_UPDATE_SUBMODULE_SHAS_ON_MASTER which must be set to 'true';
+# any other value will cause the submodule update to NOT occur.
+function update_submodules {
+
+  if [ "$AUTO_UPDATE_SUBMODULE_SHAS_ON_MASTER" = "true" ]; then
+    echo "***************************************************************"
+    echo "   Auto-updating submodules for branch '$current_git_branch_name'"
+    echo "***************************************************************"
+    echo_cmd git submodule update --remote --merge
+  else
+    echo "DISABLED: Auto-updating submodules"
+  fi
 }
 
 function get_current_git_branch_name {
@@ -246,24 +271,13 @@ function commit_and_push_submodule_sha_updates {
   fi  
 }
 
-function checkout_git_master_if_detached_head {
-  set_current_git_branch_name
-  if [[ "$current_git_branch_name" = "HEAD" ]]; then
-    echo "Git currently has detached HEAD"
-    checkout_git_master_branch
-  fi
-}
-
-function update_submodules {
-  set_current_git_branch_name
-  checkout_git_master_if_detached_head
-  update_git_branch
-  update_git_submodules
-}
-
 function update_submodules_and_commit_shas {
   update_submodules
-  commit_and_push_submodule_sha_updates
+  if [[ "$current_git_branch_name" = "HEAD" ]]; then
+    commit_and_push_submodule_sha_updates
+  else
+    echo "DISABLED: Auto-updating submodules and SHA committing"
+  fi
 }
 
 # We currently auto-update submodule SHAs only as part of the Jenkins/CI process
@@ -276,18 +290,8 @@ function update_submodules_and_commit_shas_if_detached_head {
   fi
 }
 
-# Since database migration is performed in CMS, the db/schema.rb file
-# for non-CMS applications can get out of sync.  The ./configure file
-# in such projects should invoke this method to make sure that the
-# db/schema.rb file is updated periodically.
-#
-# The 'cruise' check is to allow Jenkins to not do this, since
-# non-CMS applications _do_ have their own databases and therefore
-# handle db/schema.rb differently.
-function dump_schema {
-    if ! [[ "$TEST_ENVIRONMENT" == 'cruise' ]]; then
-      bundle exec rake db:schema:dump
-    fi
-}
+# ***********************************************************
+# ******* END CODE TO SUPPORT AUTO SUBMODULE UPDATING *******
+# ***********************************************************
 
 echo "Finished loading roboconf functions"
