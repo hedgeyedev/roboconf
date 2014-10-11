@@ -259,17 +259,21 @@ function git_add_and_commit_submodule_dirs {
 }
 
 function commit_and_push_submodule_sha_updates {
-  set_git_status
-  if [[ "$git_status" == *"Changes not staged"* ]]; then
-    git_add_and_commit_submodule_dirs
-    set_git_show
-    if [[ "$git_show" == *"auto-update all submodules"* ]]; then
-      echo "***************************************************************"
-      echo "   Pushing changes back to $current_git_branch_name"
-      echo "***************************************************************"
-      git push -v origin $current_git_branch_name
+  if [ "$AUTO_UPDATE_SUBMODULE_SHAS_ON_MASTER" = "true" ]; then
+    set_git_status
+    if [[ "$git_status" == *"Changes not staged"* ]]; then
+      git_add_and_commit_submodule_dirs
+      set_git_show
+      if [[ "$git_show" == *"auto-update all submodules"* ]]; then
+        echo "***************************************************************"
+        echo "   Pushing changes back to $current_git_branch_name"
+        echo "***************************************************************"
+        git push -v origin $current_git_branch_name
+      fi
     fi
-  fi  
+  else
+    echo "DISABLED: Committing and pushing submodule SHA updates"
+  fi
 }
 
 function update_submodules_and_commit_shas {
