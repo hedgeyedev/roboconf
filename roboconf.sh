@@ -225,6 +225,7 @@ function get_current_git_branch_name {
 
 function set_current_git_branch_name {
   current_git_branch_name=$(get_current_git_branch_name)
+  echo "The current branch is '$current_git_branch_name'"
 }
 
 function set_git_status {
