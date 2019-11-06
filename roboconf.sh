@@ -26,10 +26,8 @@ function roboconf-bundler {
 
   roboconf-check rvm
   roboconf-check gem
-  # Assumes rvm
-  # On Jan 3, 2019, bundler was updated to 2.0.0.  Can't go there yet, so specifically demand the
-  # old until we can figure out what to do.
-  gem install bundler -v 1.17.3 --no-rdoc --no-ri
+  # ok to move to bundler 2.*
+  gem install bundler --no-document
   bundle install $opts
 }
 
