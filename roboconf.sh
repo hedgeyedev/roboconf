@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 echo "Begin loading roboconf functions..."
 
@@ -6,7 +6,7 @@ function roboconf-check {
   echo -n "checking for $1... "
   hash "$1" 2>&- || {
     echo 'no'
-    exit -1
+    exit 1
   }
   echo 'yes'
 }
@@ -21,14 +21,41 @@ function check_out_current_project_shas {
   git submodule update
 }
 
-function roboconf-bundler {
-  opts="$1"
-
-  roboconf-check rvm
+# Only used for Ruby 1.x environments
+function roboconf-bundler1 {
+  roboconf-check ruby
   roboconf-check gem
-  # ok to move to bundler 2.*
+  gem install bundler -v 1.17.3 --no-rdoc --no-ri
+  # shellcheck disable=SC2086
+  roboconf-bundler-install $1
+}
+
+function roboconf-bundler {
+  roboconf-bundler-prepare
+  # shellcheck disable=SC2086
+  roboconf-bundler-install $1
+}
+
+function roboconf-bundler-dev {
+  roboconf-bundler-prepare
+  roboconf-bundler-without
+  # shellcheck disable=SC2086
+  roboconf-bundler-install $1
+}
+
+function roboconf-bundler-prepare {
+  roboconf-check ruby
+  roboconf-check gem
   gem install bundler --no-document
-  bundle install $opts
+}
+
+function roboconf-bundler-install {
+  # shellcheck disable=SC2086
+  bundle install $1
+}
+
+function roboconf-bundler-without {
+  bundle config set --local without 'production staging'
 }
 
 function roboconf-npm {
