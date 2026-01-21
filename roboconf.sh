@@ -2,39 +2,66 @@
 
 echo "Begin loading roboconf functions..."
 
+function term-width() {
+  if [ -t 1 ]; then
+    tput cols 2>/dev/null
+  elif [ -n "$COLUMNS" ]; then
+    echo $COLUMNS
+  else
+    echo 80
+  fi
+}
+
 function banner() {
   # Example use: banner "Flibberty-gibbiting..."
+
+  tput cols 1>/dev/null 2>/dev/null # ensure the shell is in a state to use tput
+  echo "" # blank line before banner
+
   local text="$1"
   local bg=${2:-2}
   local fg=${3:-0}
-  local target_width=80
+  local term_width=$(term-width)
+  local target_width
 
-  echo
+  target_width=$(( term_width < 80 ? term_width : 80 ))
+
+  if [ "$ROB_CONF_DEBUG" == "true" ]; then
+    echo "Debug: term_width=$term_width, target_width=$target_width, text_length=${#text}"
+  fi
 
   # Set colors
   tput setab "$bg"
   tput setaf "$fg"
 
-  # Calculate padding for centering
-  local text_length=${#text}
+  # Split text into words and build lines
+  local words=($text)
+  local line=""
+  local lines=()
+  for word in "${words[@]}"; do
+    if [[ ${#line} -eq 0 ]]; then
+      line="$word"
+    elif (( ${#line} + 1 + ${#word} <= target_width )); then
+      line="$line $word"
+    else
+      lines+=("$line")
+      line="$word"
+    fi
+  done
+  [[ -n "$line" ]] && lines+=("$line")
 
-  if [ $text_length -lt $target_width ]; then
-    # Calculate left and right padding
-    local total_padding=$((target_width - text_length))
-    local left_padding=$((total_padding / 2))
-    local right_padding=$((total_padding - left_padding))
+  for l in "${lines[@]}"; do
+    local pad=$(( (target_width - ${#l}) / 2 ))
+    printf "%*s%s%*s" $pad "" "$l" $((target_width - pad - ${#l})) ""
+    tput sgr0
+    tput el
+    echo
+    tput setab "$bg"
+    tput setaf "$fg"
+  done
 
-    # Print with centered text
-    printf "%*s%s%*s" $left_padding "" "$text" $right_padding ""
-  else
-    # banner is longer than or equal to target width, just print it
-    printf "%s" "$text"
-  fi
-
-  # Reset formatting and clear to end of line
   tput sgr0
   tput el
-  echo
 }
 
 function roboconf-check {
